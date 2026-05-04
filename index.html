@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>我的世界：数字突击</title>
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app">
+      <!-- UI Overlays -->
+      <div id="main-menu" class="screen active">
+        <h1>我的世界：数字突击</h1>
+        <div class="character-select">
+          <h2>选择你的英雄</h2>
+          <div class="characters">
+            <div class="char-card selected" data-char="jiejie">
+              <div class="char-sprite jiejie"></div>
+              <span>结节</span>
+            </div>
+            <div class="char-card" data-char="maiqi">
+              <div class="char-sprite maiqi"></div>
+              <span>麦奇</span>
+            </div>
+          </div>
+        </div>
+        <div class="mode-select">
+          <button id="btn-story" class="mc-btn">通关模式</button>
+          <button id="btn-endless" class="mc-btn">无尽模式</button>
+        </div>
+      </div>
+
+      <div id="game-hud" class="screen hidden">
+        <div class="hud-top">
+          <div class="health-bar" id="health-container">
+            <!-- Hearts will be injected here -->
+          </div>
+          <div class="score">分数: <span id="score-val">0</span></div>
+        </div>
+        <div class="hud-middle">
+          <div id="combo-display" class="combo hidden">连击 <span id="combo-val">0</span>!</div>
+        </div>
+        <div class="hud-bottom">
+          <div class="input-display">输入: <span id="input-val">_</span></div>
+        </div>
+      </div>
+
+      <div id="game-over" class="screen hidden">
+        <h2>游戏结束!</h2>
+        <div class="final-score">最终分数: <span id="final-score-val">0</span></div>
+        <button id="btn-restart" class="mc-btn">返回主菜单</button>
+      </div>
+
+      <div id="stage-clear" class="screen hidden">
+        <h2>关卡通过!</h2>
+        <button id="btn-next-stage" class="mc-btn">下一关</button>
+      </div>
+
+      <canvas id="game-canvas"></canvas>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

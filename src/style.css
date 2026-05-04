@@ -1,0 +1,231 @@
+:root {
+  --mc-dirt: #866043;
+  --mc-grass: #5D9038;
+  --mc-stone: #7D7D7D;
+  --mc-wood: #B4835D;
+  --text-color: #FFFFFF;
+  --shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
+  --btn-hover: #75B04A;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'ZCOOL KuaiLe', 'Courier New', Courier, monospace;
+  background-color: #000;
+  color: var(--text-color);
+  overflow: hidden;
+  user-select: none;
+}
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background-color: #87CEEB; /* Sky blue base */
+  image-rendering: pixelated;
+}
+
+.screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.screen.hidden {
+  display: none;
+}
+
+h1 {
+  font-size: 4rem;
+  color: #FFD700;
+  text-shadow: var(--shadow);
+  margin-bottom: 2rem;
+  letter-spacing: 2px;
+}
+
+h2 {
+  font-size: 2.5rem;
+  text-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+}
+
+/* Character Selection */
+.character-select {
+  background: var(--mc-stone);
+  border: 4px solid #fff;
+  padding: 20px;
+  margin-bottom: 30px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.characters {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.char-card {
+  width: 120px;
+  height: 150px;
+  background: rgba(0,0,0,0.5);
+  border: 4px solid transparent;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.char-card:hover {
+  transform: scale(1.05);
+}
+
+.char-card.selected {
+  border-color: #FFD700;
+  background: rgba(255, 215, 0, 0.2);
+}
+
+.char-sprite {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 10px;
+  background-size: cover;
+  image-rendering: pixelated;
+}
+
+/* Placeholder Sprites using CSS for now */
+.char-sprite.jiejie {
+  background-color: #E74C3C;
+  border-radius: 50%;
+  border: 4px solid #C0392B;
+}
+
+.char-sprite.maiqi {
+  background-color: #3498DB;
+  border: 4px solid #2980B9;
+}
+
+/* Buttons */
+.mc-btn {
+  font-family: 'ZCOOL KuaiLe', sans-serif;
+  font-size: 1.5rem;
+  padding: 10px 30px;
+  margin: 10px;
+  background-color: var(--mc-grass);
+  color: white;
+  border: 4px solid #000;
+  border-right-color: #fff;
+  border-bottom-color: #fff;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: all 0.1s;
+}
+
+.mc-btn:active {
+  border-top-color: #000;
+  border-left-color: #000;
+  border-right-color: #000;
+  border-bottom-color: #000;
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+}
+
+.mc-btn:hover {
+  background-color: var(--btn-hover);
+}
+
+/* HUD */
+#game-hud {
+  background: transparent;
+  pointer-events: none;
+  justify-content: space-between;
+}
+
+.hud-top {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 20px 40px;
+  font-size: 2rem;
+  text-shadow: 2px 2px 0 #000;
+}
+
+.health-bar {
+  display: flex;
+  gap: 5px;
+}
+
+.heart {
+  width: 30px;
+  height: 30px;
+  background-color: red;
+  clip-path: polygon(50% 100%, 0 50%, 0 0, 50% 30%, 100% 0, 100% 50%);
+  display: inline-block;
+}
+
+.hud-middle {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.combo {
+  font-size: 4rem;
+  color: #FFA500;
+  text-shadow: 4px 4px 0 #000;
+  animation: pulse 0.5s infinite alternate;
+}
+
+@keyframes pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.1); }
+}
+
+.hud-bottom {
+  width: 100%;
+  text-align: center;
+  padding-bottom: 50px;
+}
+
+.input-display {
+  font-size: 3.5rem;
+  background: rgba(0,0,0,0.6);
+  display: inline-block;
+  padding: 10px 40px;
+  border: 4px solid var(--mc-stone);
+  text-shadow: 2px 2px 0 #000;
+}
+
+/* Game Over / Stage Clear */
+.final-score {
+  font-size: 2rem;
+  margin-bottom: 30px;
+}
