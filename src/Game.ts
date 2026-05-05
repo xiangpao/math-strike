@@ -1014,18 +1014,7 @@ export class Game {
       this.bombFlashTimer -= 0.016 * 1.5; // Approx dt
     }
     
-    // Draw Bomb HUD
-    this.ctx.save();
-    this.ctx.textAlign = 'left';
-    this.ctx.textBaseline = 'top';
-    this.ctx.font = '24px Courier';
-    this.ctx.fillStyle = '#fff';
-    this.ctx.fillText(`Bombs: ${'⭐'.repeat(this.bombs)}`, 20, 20);
-    if (this.bombs > 0) {
-       this.ctx.font = '14px Courier';
-       this.ctx.fillText('(Press SPACE)', 20, 50);
-    }
-    this.ctx.restore();
+    // Bomb HUD is now rendered in HTML (see #bomb-val in index.html)
   }
 }
 

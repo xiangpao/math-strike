@@ -56,6 +56,13 @@ body {
   background: rgba(0, 0, 0, 0.7);
 }
 
+/* Game HUD must be fully transparent - no background */
+#game-hud.screen {
+  background: transparent;
+  pointer-events: none;
+  justify-content: space-between;
+}
+
 .screen.hidden {
   display: none;
 }
@@ -173,15 +180,42 @@ h2 {
   width: 100%;
   display: flex;
   justify-content: space-between;
-  padding: 20px 40px;
+  align-items: flex-start;
+  padding: 16px 24px;
   font-size: 2rem;
   text-shadow: 2px 2px 0 #000;
 }
 
-.health-bar {
+.hud-top-left {
   display: flex;
-  gap: 5px;
+  flex-direction: column;
+  gap: 6px;
 }
+
+.bomb-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 1.1rem;
+  text-shadow: 2px 2px 0 #000;
+}
+
+.bomb-label {
+  color: #FFD700;
+  font-weight: bold;
+}
+
+#bomb-val {
+  color: #FFA500;
+  letter-spacing: 2px;
+}
+
+.bomb-hint {
+  color: #aaa;
+  font-size: 0.75rem;
+  margin-left: 4px;
+}
+
 
 .heart {
   width: 30px;

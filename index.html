@@ -16,12 +16,12 @@
           <div class="characters">
             <div class="char-card selected" data-char="jiejie">
               <div class="char-sprite jiejie"></div>
-              <span style="font-weight: bold; color: #FFD700;">结节</span>
+              <span style="font-weight: bold; color: #FFD700;">桀桀</span>
               <span style="font-size: 0.8rem; color: #ccc;">重型战机<br>30%爆破弹<br>初始+1生命</span>
             </div>
             <div class="char-card" data-char="maijie">
               <div class="char-sprite maijie"></div>
-              <span style="font-weight: bold; color: #5D9038;">麦结</span>
+              <span style="font-weight: bold; color: #5D9038;">麦琪</span>
               <span style="font-size: 0.8rem; color: #ccc;">敏捷战机<br>+25%移速<br>双倍磁铁</span>
             </div>
           </div>
@@ -34,8 +34,15 @@
 
       <div id="game-hud" class="screen hidden">
         <div class="hud-top">
-          <div class="health-bar" id="health-container">
-            <!-- Hearts will be injected here -->
+          <div class="hud-top-left">
+            <div class="health-bar" id="health-container">
+              <!-- Hearts will be injected here -->
+            </div>
+            <div class="bomb-bar" id="bomb-container">
+              <span class="bomb-label">炸弹:</span>
+              <span id="bomb-val">★</span>
+              <span class="bomb-hint">[SPACE]</span>
+            </div>
           </div>
           <div class="score">分数: <span id="score-val">0</span></div>
         </div>

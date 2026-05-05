@@ -87,14 +87,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Bomb display (HTML, not canvas)
+  game.onBombsUpdate = (bombs) => {
+    const bombVal = document.getElementById('bomb-val') as HTMLElement;
+    const bombHint = document.querySelector('.bomb-hint') as HTMLElement;
+    bombVal.innerText = bombs > 0 ? '★'.repeat(bombs) : '∅ 无';
+    if (bombHint) bombHint.style.opacity = bombs > 0 ? '1' : '0.4';
+  };
+
+  let comboHideTimer: ReturnType<typeof setTimeout> | null = null;
   game.onComboUpdate = (combo) => {
     const comboDisplay = document.getElementById('combo-display') as HTMLElement;
     const comboVal = document.getElementById('combo-val') as HTMLElement;
     if (combo > 1) {
       comboDisplay.classList.remove('hidden');
+      comboDisplay.classList.add('combo-show');
       comboVal.innerText = combo.toString();
+      // Reset auto-hide timer
+      if (comboHideTimer) clearTimeout(comboHideTimer);
+      comboHideTimer = setTimeout(() => {
+        comboDisplay.classList.add('hidden');
+        comboDisplay.classList.remove('combo-show');
+        comboHideTimer = null;
+      }, 2000);
     } else {
+      if (comboHideTimer) clearTimeout(comboHideTimer);
       comboDisplay.classList.add('hidden');
+      comboDisplay.classList.remove('combo-show');
     }
   };
 
