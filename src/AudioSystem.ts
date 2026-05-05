@@ -5,12 +5,16 @@ export class AudioSystem {
   private bgmGain: GainNode | null = null;
   private bgmPlaying: boolean = false;
 
-  // Minecraft-style 8-bit BGM melody (note freqs in Hz, duration in beats)
+  // Raiden-style intense fast arpeggio BGM melody
   private readonly BGM_NOTES: [number, number][] = [
-    [330, 1],[294, 0.5],[262, 0.5],[294, 1],[330, 1],[330, 1],[330, 2],
-    [294, 1],[294, 1],[294, 2],[330, 1],[392, 1],[392, 2],
-    [330, 1],[294, 0.5],[262, 0.5],[294, 1],[330, 1],[330, 1],[330, 1],
-    [294, 1],[294, 1],[330, 1],[294, 1],[262, 4],
+    [440, 0.25],[523, 0.25],[659, 0.25],[880, 0.25], // A minor arpeggio
+    [440, 0.25],[523, 0.25],[659, 0.25],[880, 0.25],
+    [349, 0.25],[440, 0.25],[523, 0.25],[698, 0.25], // F major arpeggio
+    [349, 0.25],[440, 0.25],[523, 0.25],[698, 0.25],
+    [392, 0.25],[493, 0.25],[587, 0.25],[783, 0.25], // G major arpeggio
+    [392, 0.25],[493, 0.25],[587, 0.25],[783, 0.25],
+    [330, 0.25],[415, 0.25],[493, 0.25],[659, 0.25], // E major arpeggio
+    [330, 0.25],[415, 0.25],[493, 0.25],[659, 0.25]
   ];
   private bgmScheduled: boolean = false;
 
@@ -38,6 +42,9 @@ export class AudioSystem {
 
   public playBGM() {
     if (!this.enabled || !this.ctx) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
     if (this.bgmPlaying) return;
     this.bgmPlaying = true;
 
@@ -54,7 +61,7 @@ export class AudioSystem {
   private _startSynthBGM() {
     if (!this.ctx || !this.bgmGain || this.bgmScheduled) return;
     this.bgmScheduled = true;
-    const BPM = 120;
+    const BPM = 160; // Faster, aggressive tempo
     const beatDur = 60 / BPM;
     let t = this.ctx.currentTime + 0.05;
 
@@ -135,6 +142,13 @@ export class AudioSystem {
   public playExplosion() {
     this.playNoise(0.55, 0.55);
     this.playTone(120, 'sawtooth', 0.3, 0.15, 60);
+  }
+
+  public playBomb() {
+    this.playNoise(1.5, 0.8);
+    this.playTone(80, 'sawtooth', 1.0, 0.4, 40);
+    setTimeout(() => this.playNoise(1.0, 0.6), 200);
+    setTimeout(() => this.playTone(100, 'square', 0.8, 0.3, 50), 400);
   }
 
   public playPowerUp() {

@@ -1,5 +1,8 @@
 import { AudioSystem } from './AudioSystem';
 
+interface FloatText { x: number; y: number; text: string; color: string; life: number; vy: number; }
+interface Obstacle { x: number; y: number; radius: number; vx: number; vy: number; rotation: number; rotSpeed: number; }
+
 export class Game {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -22,6 +25,8 @@ export class Game {
   private particles: Particle[] = [];
   private items: Item[] = [];
   private floatTexts: FloatText[] = [];
+  private obstacles: Obstacle[] = [];
+  private obstacleSpawnTimer: number = 0;
   private bgStars: {x: number, y: number, speed: number, size: number, color: string}[] = [];
   private gameTime: number = 0;
   
@@ -44,6 +49,10 @@ export class Game {
   private piercingSword: boolean = false;
   private shieldActive: boolean = false;
 
+  private weaponLevel: number = 1;
+  private bombs: number = 1;
+  private bombFlashTimer: number = 0;
+
   private bossActive: boolean = false;
   private bossEntity: Enemy | null = null;
   private bossTimer: number = 0;
@@ -53,6 +62,7 @@ export class Game {
   public onScoreUpdate: (score: number) => void = () => {};
   public onHealthUpdate: (health: number) => void = () => {};
   public onComboUpdate: (combo: number) => void = () => {};
+  public onBombsUpdate: (bombs: number) => void = () => {};
   public onInputUpdate: (input: string) => void = () => {};
 
   constructor(canvas: HTMLCanvasElement, audio: AudioSystem) {
@@ -69,7 +79,7 @@ export class Game {
   private loadImages() {
     const assets = [
       'player', 'maqi', 'creeper', 'zombie', 
-      'skeleton', 'enderman', 'spider', 'wither'
+      'skeleton', 'enderman', 'spider', 'wither', 'meteor'
     ];
     for (const name of assets) {
       const img = new Image();
@@ -117,6 +127,9 @@ export class Game {
     this.enemyBullets = [];
     this.particles = [];
     this.items = [];
+    this.floatTexts = [];
+    this.obstacles = [];
+    this.obstacleSpawnTimer = 0;
     this.currentInput = '';
     this.onInputUpdate(this.currentInput);
     this.enemiesSpawned = 0;
@@ -145,8 +158,16 @@ export class Game {
   private resetPlayerStats() {
     this.score = 0;
     this.health = 5;
-    this.maxHealth = 5;
+    if (this.character === 'jiejie') {
+      this.health = 6;
+      this.maxHealth = 6;
+    } else {
+      this.maxHealth = 5;
+    }
     this.combo = 0;
+    this.weaponLevel = 1;
+    this.bombs = 1;
+    this.onBombsUpdate(this.bombs);
   }
 
   private handleKeyDown(e: KeyboardEvent) {
@@ -161,7 +182,10 @@ export class Game {
     } else if (e.key === 'Backspace') {
       this.currentInput = this.currentInput.slice(0, -1);
       this.onInputUpdate(this.currentInput);
-    } else if (e.key === 'Enter' || e.key === ' ') {
+    } else if (e.key === ' ') {
+      this.useBomb();
+      e.preventDefault();
+    } else if (e.key === 'Enter') {
       this.fireBullet();
       e.preventDefault();
     }
@@ -169,6 +193,35 @@ export class Game {
 
   private handleKeyUp(e: KeyboardEvent) {
     this.keys[e.key] = false;
+  }
+
+  private useBomb() {
+    if (!this.isRunning || this.bombs <= 0) return;
+    this.bombs--;
+    this.onBombsUpdate(this.bombs);
+    this.audio.playBomb();
+    this.bombFlashTimer = 1.0;
+    this.enemyBullets = [];
+    
+    // Deal massive damage to all enemies
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      e.hp -= 50;
+      if (e.hp <= 0) {
+        this.createParticles(e.x, e.y, '#ff0000', 20);
+        this.enemies.splice(i, 1);
+        this.score += e.type.startsWith('boss') ? 100 : 10;
+        this.spawnItem(e.x, e.y, e.dropLoot);
+        if (e.type.startsWith('boss')) {
+          this.bossActive = false;
+          if (this.mode === 'story') {
+            this.isRunning = false;
+            this.onStageClear();
+          }
+        }
+      }
+    }
+    this.onScoreUpdate(this.score);
   }
 
   private fireBullet() {
@@ -192,15 +245,26 @@ export class Game {
       this.onComboUpdate(this.combo);
 
       let bType: 'normal' | 'fire' | 'tnt' | 'laser' = 'normal';
-      if (this.combo >= 10) bType = 'laser';
-      else if (this.combo >= 6) bType = 'tnt';
-      else if (this.combo >= 3) bType = 'fire';
+      let spread = 1;
+
+      if (this.character === 'jiejie') {
+         if (this.weaponLevel === 1) { bType = 'normal'; spread = 1; }
+         else if (this.weaponLevel === 2) { bType = 'fire'; spread = 3; }
+         else { bType = 'tnt'; spread = 3; }
+         if (Math.random() < 0.3) bType = 'tnt';
+      } else {
+         if (this.weaponLevel === 1) { bType = 'normal'; spread = 1; }
+         else if (this.weaponLevel === 2) { bType = 'laser'; spread = 1; }
+         else { bType = 'laser'; spread = 3; }
+      }
+
+      if (this.combo >= 10 && spread < 5) spread += 2;
 
       // Play milestone combo sounds
       if (this.combo === 3 || this.combo === 6 || this.combo === 10) this.audio.playCombo();
       if (bType === 'laser') this.audio.playLaser();
       else this.audio.playShoot();
-      const spread = this.combo >= 5 ? 3 : 1;
+      
       for (let i = 0; i < spread; i++) {
         const angleOffset = (i - Math.floor(spread/2)) * 0.2;
         this.bullets.push({
@@ -210,7 +274,7 @@ export class Game {
           target,
           type: bType,
           angleOffset,
-          piercing: this.piercingSword
+          piercing: this.piercingSword || bType === 'laser'
         });
       }
     } else {
@@ -318,18 +382,18 @@ export class Game {
 
   private spawnItem(x: number, y: number, guaranteed: boolean = false) {
     const rand = Math.random();
-    let itemType: 'apple' | 'potion' | 'sword' | 'totem' | null = null;
+    let itemType: 'heal' | 'powerup' | 'bomb' | 'totem' | null = null;
     if (guaranteed) {
-      const types: Array<'apple' | 'potion' | 'sword' | 'totem'> = ['apple', 'potion', 'sword', 'totem'];
+      const types: Array<'heal' | 'powerup' | 'bomb' | 'totem'> = ['heal', 'powerup', 'bomb', 'totem'];
       itemType = types[Math.floor(Math.random() * types.length)];
-    } else if (rand < 0.08) itemType = 'apple';
-    else if (rand < 0.14) itemType = 'potion';
-    else if (rand < 0.19) itemType = 'sword';
+    } else if (rand < 0.08) itemType = 'heal';
+    else if (rand < 0.16) itemType = 'powerup';
+    else if (rand < 0.20) itemType = 'bomb';
     else if (rand < 0.23) itemType = 'totem';
 
     if (itemType) {
-      this.items.push({ x, y, type: itemType, speed: 90, width: 34, height: 34, age: 0 });
-      const labels: Record<string, string> = { apple: '💛 金苹果！', potion: '⚡ 迅捷药水！', sword: '💎 穿透剑！', totem: '🛡 不死图腾！' };
+      this.items.push({ x, y, type: itemType as any, speed: 90, width: 34, height: 34, age: 0 });
+      const labels: Record<string, string> = { heal: '💛 金苹果！', powerup: '⚔ 武器升级！', bomb: '⭐ 下界之星！', totem: '🛡 不死图腾！' };
       this.spawnFloatText(x, y - 30, labels[itemType], '#FFD700');
     }
   }
@@ -383,6 +447,7 @@ export class Game {
     if (dx !== 0 || dy !== 0) {
       const len = Math.sqrt(dx*dx + dy*dy);
       let speed = this.playerSpeed;
+      if (this.character === 'maijie') speed *= 1.25;
       if (this.swiftnessTimer > 0) speed *= 1.3;
       this.playerX += (dx/len) * speed * dt;
       this.playerY += (dy/len) * speed * dt;
@@ -391,6 +456,52 @@ export class Game {
     // Bounds
     this.playerX = Math.max(30, Math.min(this.canvas.width - 30, this.playerX));
     this.playerY = Math.max(30, Math.min(this.canvas.height - 30, this.playerY));
+
+    // Spawn and Update Obstacles
+    this.obstacleSpawnTimer -= dt * 1000;
+    if (this.obstacleSpawnTimer <= 0) {
+      this.obstacleSpawnTimer = 2000 + Math.random() * 3000;
+      const isDynamic = Math.random() > 0.5;
+      this.obstacles.push({
+        x: Math.random() * this.canvas.width,
+        y: -50,
+        radius: 20 + Math.random() * 20,
+        vx: isDynamic ? (Math.random() - 0.5) * 100 : 0,
+        vy: 100 + Math.random() * 100,
+        rotation: 0,
+        rotSpeed: (Math.random() - 0.5) * 2
+      });
+    }
+
+    for (let i = this.obstacles.length - 1; i >= 0; i--) {
+      const obs = this.obstacles[i];
+      obs.x += obs.vx * dt;
+      obs.y += obs.vy * dt;
+      obs.rotation += obs.rotSpeed * dt;
+
+      // Check collision with player
+      const odx = this.playerX - obs.x;
+      const ody = this.playerY - obs.y;
+      if (Math.sqrt(odx*odx + ody*ody) < obs.radius + 20) {
+        this.obstacles.splice(i, 1);
+        this.createParticles(obs.x, obs.y, '#7D7D7D', 20);
+        this.audio.playExplosion();
+        if (!this.shieldActive) {
+          this.health--;
+          this.onHealthUpdate(this.health);
+          if (this.health <= 0) {
+            this.isRunning = false;
+            this.onGameOver(this.score);
+            return;
+          }
+        } else {
+          this.shieldActive = false;
+          this.spawnFloatText(this.playerX, this.playerY - 20, '护盾抵挡！', '#A0A0FF');
+        }
+        continue;
+      }
+      if (obs.y > this.canvas.height + 50) this.obstacles.splice(i, 1);
+    }
 
     // Spawn logic
     if (!this.bossActive) {
@@ -500,20 +611,30 @@ export class Game {
       // Magnetic attract when near player
       const idx = this.items.indexOf(item);
       if (idx !== -1) {
+        const magnetRadius = this.character === 'maijie' ? 240 : 120;
         const ddx = this.playerX - item.x, ddy = this.playerY - item.y;
         const d = Math.sqrt(ddx*ddx + ddy*ddy);
-        if (d < 120) {
+        if (d < magnetRadius) {
           item.x += (ddx/d) * 200 * dt;
           item.y += (ddy/d) * 200 * dt;
         }
       }
       if (Math.abs(item.x - this.playerX) < 30 && Math.abs(item.y - this.playerY) < 30) {
         this.audio.playPowerUp();
-        const buffLabels: Record<string, string> = { apple: '+1 生命！', potion: '加速中！', sword: '穿透激活！', totem: '护盾激活！' };
-        this.spawnFloatText(item.x, item.y - 10, buffLabels[item.type], '#00FF88');
-        if (item.type === 'apple') {
+        const buffLabels: Record<string, string> = { 
+          heal: '+1 生命！', powerup: '火力升级！', bomb: '获得炸弹！', 
+          apple: '+1 生命！', potion: '加速中！', sword: '穿透激活！', totem: '护盾激活！' 
+        };
+        this.spawnFloatText(item.x, item.y - 10, buffLabels[item.type] || 'UP!', '#00FF88');
+        
+        if (item.type === 'heal' || item.type === 'apple') {
           this.health = Math.min(this.health + 1, this.maxHealth);
           this.onHealthUpdate(this.health);
+        } else if (item.type === 'powerup') {
+          this.weaponLevel = Math.min(3, this.weaponLevel + 1);
+        } else if (item.type === 'bomb') {
+          this.bombs = Math.min(3, this.bombs + 1);
+          this.onBombsUpdate(this.bombs);
         } else if (item.type === 'potion') {
           this.swiftnessTimer = 10;
           this.slownessTimer = 5;
@@ -657,8 +778,8 @@ export class Game {
       const age = item.age || 0;
       const bounce = Math.sin(age * 5) * 4;
       const pulse = 0.6 + 0.4 * Math.sin(age * 6);
-      const colors: Record<string, string> = { apple: '#FFD700', potion: '#B44FE8', sword: '#00FFFF', totem: '#FF8C00' };
-      const glows: Record<string, string> = { apple: 'rgba(255,215,0,', potion: 'rgba(180,79,232,', sword: 'rgba(0,255,255,', totem: 'rgba(255,140,0,' };
+      const colors: Record<string, string> = { heal: '#FFD700', powerup: '#00FFFF', bomb: '#FFFFFF', totem: '#FF8C00', apple: '#FFD700', potion: '#B44FE8', sword: '#00FFFF' };
+      const glows: Record<string, string> = { heal: 'rgba(255,215,0,', powerup: 'rgba(0,255,255,', bomb: 'rgba(255,255,255,', totem: 'rgba(255,140,0,', apple: 'rgba(255,215,0,', potion: 'rgba(180,79,232,', sword: 'rgba(0,255,255,' };
       const col = colors[item.type] || '#fff';
       const glow = glows[item.type] || 'rgba(255,255,255,';
       this.ctx.save();
@@ -677,7 +798,7 @@ export class Game {
       this.ctx.fillRect(item.x - item.width/2, item.y - item.height/2 + bounce, item.width, item.height);
       this.ctx.shadowBlur = 0;
       // Icon text
-      const icons: Record<string, string> = { apple: '🍎', potion: '⚗', sword: '⚔', totem: '🗿' };
+      const icons: Record<string, string> = { heal: '🍎', powerup: '⚔', bomb: '⭐', totem: '🗿', apple: '🍎', potion: '⚗', sword: '⚔' };
       this.ctx.font = '20px serif';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
@@ -746,14 +867,38 @@ export class Game {
         this.ctx.fillRect(-hpBarW/2, -e.height/2 - 20, hpBarW * (e.hp/e.maxHp), 10);
       }
 
+      this.ctx.font = 'bold 18px Courier';
+      const textWidth = this.ctx.measureText(e.problem).width;
+      const boxWidth = Math.max(60, textWidth + 20);
+
       this.ctx.fillStyle = '#D2B48C';
-      this.ctx.fillRect(-30, -e.height/2 - 30, 60, 25);
+      this.ctx.fillRect(-boxWidth/2, -e.height/2 - 30, boxWidth, 25);
       this.ctx.fillStyle = '#000';
       this.ctx.font = 'bold 18px Courier';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText(e.problem, 0, -e.height/2 - 17);
       
+      this.ctx.restore();
+    }
+
+    // Draw Obstacles
+    for (const obs of this.obstacles) {
+      this.ctx.save();
+      this.ctx.translate(obs.x, obs.y);
+      this.ctx.rotate(obs.rotation);
+      const mImg = this.images['meteor'];
+      if (mImg && mImg.complete) {
+        this.ctx.drawImage(mImg, -obs.radius, -obs.radius, obs.radius * 2, obs.radius * 2);
+      } else {
+        this.ctx.fillStyle = '#7D7D7D';
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, obs.radius, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#555';
+        this.ctx.lineWidth = 3;
+        this.ctx.stroke();
+      }
       this.ctx.restore();
     }
 
@@ -863,6 +1008,24 @@ export class Game {
       this.ctx.fillStyle = 'rgba(0, 255, 255, 0.05)';
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
+    if (this.bombFlashTimer > 0) {
+      this.ctx.fillStyle = `rgba(255, 255, 255, ${this.bombFlashTimer})`;
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.bombFlashTimer -= 0.016 * 1.5; // Approx dt
+    }
+    
+    // Draw Bomb HUD
+    this.ctx.save();
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'top';
+    this.ctx.font = '24px Courier';
+    this.ctx.fillStyle = '#fff';
+    this.ctx.fillText(`Bombs: ${'⭐'.repeat(this.bombs)}`, 20, 20);
+    if (this.bombs > 0) {
+       this.ctx.font = '14px Courier';
+       this.ctx.fillText('(Press SPACE)', 20, 50);
+    }
+    this.ctx.restore();
   }
 }
 
@@ -909,7 +1072,7 @@ interface Particle {
 interface Item {
   x: number; y: number;
   width: number; height: number;
-  type: 'apple' | 'potion' | 'sword' | 'totem';
+  type: 'heal' | 'powerup' | 'bomb' | 'apple' | 'potion' | 'sword' | 'totem';
   speed: number;
   age?: number;
 }
