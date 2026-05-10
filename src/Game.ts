@@ -714,10 +714,10 @@ export class Game {
          distToTarget = Math.sqrt(dx*dx + dy*dy);
          const moveX = (dx / distToTarget) * b.speed * dt;
          const moveY = (dy / distToTarget) * b.speed * dt;
-         b.x += moveX + (b.angleOffset ? b.angleOffset * 50 * dt : 0);
+         b.x += moveX + (b.angleOffset ? b.angleOffset * 3000 * dt : 0);
          b.y += moveY;
       } else {
-         b.x += (b.angleOffset ? b.angleOffset * 50 * dt : 0);
+         b.x += (b.angleOffset ? b.angleOffset * 3000 * dt : 0);
          b.y -= b.speed * dt;
       }
 
