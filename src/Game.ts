@@ -284,17 +284,19 @@ export class Game {
       let bType: 'normal' | 'fire' | 'tnt' | 'laser' = 'normal';
       let spread = 1;
 
+      let activeWeaponLevel = this.weaponLevel;
+      if (this.combo >= 5) activeWeaponLevel = Math.max(activeWeaponLevel, 3);
+      else if (this.combo >= 3) activeWeaponLevel = Math.max(activeWeaponLevel, 2);
+
       if (this.character === 'jiejie') {
-         if (this.weaponLevel === 1) { bType = 'normal'; spread = 1; }
-         else if (this.weaponLevel === 2) { bType = 'fire'; spread = 3; }
+         if (activeWeaponLevel === 1) { bType = 'normal'; spread = 1; }
+         else if (activeWeaponLevel === 2) { bType = 'fire'; spread = 3; }
          else { bType = 'fire'; spread = 5; }
       } else {
-         if (this.weaponLevel === 1) { bType = 'normal'; spread = 1; }
-         else if (this.weaponLevel === 2) { bType = 'laser'; spread = 1; }
+         if (activeWeaponLevel === 1) { bType = 'normal'; spread = 1; }
+         else if (activeWeaponLevel === 2) { bType = 'laser'; spread = 1; }
          else { bType = 'laser'; spread = 3; }
       }
-
-      if (this.combo >= 10 && spread < 5) spread += 2;
 
       // Play milestone combo sounds
       if (this.combo === 3 || this.combo === 6 || this.combo === 10) this.audio.playCombo();
@@ -314,8 +316,7 @@ export class Game {
         });
       }
     } else {
-      this.combo = 0;
-      this.onComboUpdate(this.combo);
+      // 错误时不打断连击，只播放错误音效和粒子（面向儿童降低惩罚）
       this.audio.playError();
       this.createParticles(this.playerX, this.playerY - 50, '#ff0000', 10);
     }
@@ -323,19 +324,43 @@ export class Game {
 
   private generateMathProblem(): { problem: string, answer: number } {
     let limit = 10;
+    
     if (this.mode === 'story') {
-      if (this.stage === 2) limit = 30;
-      else if (this.stage === 3) limit = 50;
-      else if (this.stage >= 4) limit = 100;
+      // 关卡数乘以 10，最高 100（即第10关及以后都是100以内）
+      limit = Math.min(100, this.stage * 10);
     } else {
+      // 无尽模式根据分数增加难度
       limit = Math.min(100, 10 + Math.floor(this.score / 50) * 10);
     }
 
+    if (limit <= 10) {
+      // 10以内全是基础运算
+      return this.generateBasic(10);
+    }
+
+    const r = Math.random();
+    
+    // 随着难度（limit）的上升，混合运算的概率逐渐增加，最高可达 40%
+    const mixedChance = Math.min(0.4, (limit - 10) / 100 * 0.4 + 0.1); 
+    
+    if (r < mixedChance) {
+      // 混合运算
+      return this.generateMixed(limit);
+    } else if (r < mixedChance + 0.4) {
+      // 40% 的概率出当前难度的基础运算
+      return this.generateBasic(limit);
+    } else {
+      // 剩余概率出上一阶段（低一档）的基础运算，作为过渡
+      return this.generateBasic(limit - 10);
+    }
+  }
+
+  private generateBasic(limit: number): { problem: string, answer: number } {
     let a, b, answer;
     const isAdd = Math.random() > 0.5;
     if (isAdd) {
-      a = Math.floor(Math.random() * (limit / 2)) + 1;
-      b = Math.floor(Math.random() * (limit / 2)) + 1;
+      a = Math.floor(Math.random() * (limit - 1)) + 1;
+      b = Math.floor(Math.random() * (limit - a)) + 1;
       answer = a + b;
     } else {
       a = Math.floor(Math.random() * (limit - 5)) + 5;
@@ -343,6 +368,26 @@ export class Game {
       answer = a - b;
     }
     return { problem: `${a} ${isAdd ? '+' : '-'} ${b}`, answer };
+  }
+
+  private generateMixed(limit: number): { problem: string, answer: number } {
+    let a, b, c, answer;
+    const type = Math.random() > 0.5 ? 'add-sub' : 'sub-add';
+    if (type === 'add-sub') {
+       a = Math.floor(Math.random() * (limit / 2)) + 1;
+       b = Math.floor(Math.random() * (limit / 2)) + 1;
+       const sum = a + b;
+       c = Math.floor(Math.random() * sum);
+       answer = sum - c;
+       return { problem: `${a} + ${b} - ${c}`, answer };
+    } else {
+       a = Math.floor(Math.random() * (limit - 5)) + 5;
+       b = Math.floor(Math.random() * a);
+       const diff = a - b;
+       c = Math.floor(Math.random() * (limit - diff)) + 1;
+       answer = diff + c;
+       return { problem: `${a} - ${b} + ${c}`, answer };
+    }
   }
 
   private spawnEnemy() {
@@ -473,13 +518,7 @@ export class Game {
     if (this.swiftnessTimer > 0) this.swiftnessTimer -= dt;
     else this.piercingSword = false; // Sword expires with swiftness for simplicity, or we can make it infinite for stage
 
-    if (this.combo > 0) {
-      this.comboTimer -= dt;
-      if (this.comboTimer <= 0) {
-        this.combo = 0;
-        this.onComboUpdate(this.combo);
-      }
-    }
+    // Combo timer logic removed. Combo now stays until player is damaged or enemy leaks.
 
     // Player Movement (keyboard + mobile joystick)
     let dx = 0, dy = 0;
