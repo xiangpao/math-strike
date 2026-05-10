@@ -575,8 +575,8 @@ export class Game {
         x: Math.random() * this.canvas.width,
         y: -50,
         radius: 20 + Math.random() * 20,
-        vx: isDynamic ? (Math.random() - 0.5) * 100 : 0,
-        vy: 100 + Math.random() * 100,
+        vx: isDynamic ? (Math.random() - 0.5) * 60 : 0,
+        vy: 40 + Math.random() * 60,
         rotation: 0,
         rotSpeed: (Math.random() - 0.5) * 2
       });
@@ -602,10 +602,19 @@ export class Game {
 
     // Spawn logic
     if (!this.bossActive) {
+      // 屏幕上如果没有怪，并且还没达到本关生成上限，则立即生成下一个，防止“打完没怪”的空档期
+      if (this.enemies.length === 0 && this.enemiesSpawned < this.enemiesToSpawnThisStage) {
+        this.enemySpawnTimer = 0;
+      }
+
       this.enemySpawnTimer -= dt * 1000;
       if (this.enemySpawnTimer <= 0) {
         if (this.mode === 'endless' || this.enemiesSpawned < this.enemiesToSpawnThisStage) {
-          this.spawnEnemy();
+          // 根据关卡限制同屏最大怪物数量，防止一下子出来太多
+          const maxOnScreen = this.mode === 'story' ? 1 + this.stage : 3 + Math.floor(this.score / 100);
+          if (this.enemies.length < maxOnScreen) {
+            this.spawnEnemy();
+          }
           this.enemySpawnTimer = this.enemySpawnInterval;
         } else if (this.mode === 'story' && this.enemies.length === 0) {
           this.spawnBoss();
