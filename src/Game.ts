@@ -570,13 +570,36 @@ export class Game {
     this.obstacleSpawnTimer -= dt * 1000;
     if (this.obstacleSpawnTimer <= 0) {
       this.obstacleSpawnTimer = (this.bossActive ? 1500 : 2500) + Math.random() * 2500;
-      const isDynamic = Math.random() > 0.5;
+
+      // 陨石出现方向：40% 从上方、30% 从左侧、30% 从右侧
+      const dirRoll = Math.random();
+      let ox: number, oy: number, ovx: number, ovy: number;
+      const speedBase = 30 + Math.random() * 80; // 有快有慢
+
+      if (dirRoll < 0.4) {
+        // 从上方落下
+        ox = Math.random() * this.canvas.width;
+        oy = -50;
+        ovx = (Math.random() - 0.5) * 60;
+        ovy = speedBase;
+      } else if (dirRoll < 0.7) {
+        // 从左侧飞入
+        ox = -50;
+        oy = Math.random() * (this.canvas.height * 0.6);
+        ovx = speedBase * (0.6 + Math.random() * 0.4);
+        ovy = speedBase * (Math.random() * 0.5);
+      } else {
+        // 从右侧飞入
+        ox = this.canvas.width + 50;
+        oy = Math.random() * (this.canvas.height * 0.6);
+        ovx = -speedBase * (0.6 + Math.random() * 0.4);
+        ovy = speedBase * (Math.random() * 0.5);
+      }
+
       this.obstacles.push({
-        x: Math.random() * this.canvas.width,
-        y: -50,
+        x: ox, y: oy,
         radius: 20 + Math.random() * 20,
-        vx: isDynamic ? (Math.random() - 0.5) * 60 : 0,
-        vy: 40 + Math.random() * 60,
+        vx: ovx, vy: ovy,
         rotation: 0,
         rotSpeed: (Math.random() - 0.5) * 2
       });
@@ -597,7 +620,7 @@ export class Game {
         this.damagePlayer();
         continue;
       }
-      if (obs.y > this.canvas.height + 50) this.obstacles.splice(i, 1);
+      if (obs.y > this.canvas.height + 50 || obs.x < -100 || obs.x > this.canvas.width + 100) this.obstacles.splice(i, 1);
     }
 
     // Spawn logic
@@ -680,15 +703,26 @@ export class Game {
       }
       
       // Collision with player (Ramming)
-      if (Math.abs(e.x - this.playerX) < (e.width/2 + 20) && Math.abs(e.y - this.playerY) < (e.height/2 + 20)) {
-        this.enemies.splice(i, 1);
-        this.damagePlayer();
-        continue;
-      }
+      // Boss 不能被撞死，只有子弹和炸弹能击杀 Boss
+      if (!e.type.startsWith('boss')) {
+        if (Math.abs(e.x - this.playerX) < (e.width/2 + 20) && Math.abs(e.y - this.playerY) < (e.height/2 + 20)) {
+          this.enemies.splice(i, 1);
+          this.damagePlayer();
+          continue;
+        }
 
-      if (e.y > this.canvas.height + 100) {
-        this.enemies.splice(i, 1);
-        this.damagePlayer();
+        if (e.y > this.canvas.height + 100) {
+          this.enemies.splice(i, 1);
+          this.damagePlayer();
+        }
+      } else {
+        // Boss 撞到玩家只造成伤害，不会消失
+        if (Math.abs(e.x - this.playerX) < (e.width/2 + 20) && Math.abs(e.y - this.playerY) < (e.height/2 + 20)) {
+          if (e.stateTimer > 0.5) { // 防止连续帧重复判定
+            this.damagePlayer();
+            e.stateTimer = 0; // 重置计时器，给玩家逃离时间
+          }
+        }
       }
     }
 
@@ -849,6 +883,7 @@ export class Game {
               this.createParticles(e.x, e.y, '#FFA500', 40);
               for (let j = this.enemies.length - 1; j >= 0; j--) {
                 const other = this.enemies[j];
+                if (other.type.startsWith('boss')) continue; // 溅射不能击杀 Boss
                 const odx = other.x - e.x, ody = other.y - e.y;
                 if (Math.sqrt(odx*odx + ody*ody) < 200) {
                    other.hp--;
