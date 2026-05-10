@@ -17,7 +17,7 @@ export class Game {
   private health: number = 5;
   private maxHealth: number = 5;
   private combo: number = 0;
-  private comboTimer: number = 0;
+
   private currentInput: string = '';
 
   private enemies: Enemy[] = [];
@@ -278,7 +278,7 @@ export class Game {
 
     if (target) {
       this.combo++;
-      this.comboTimer = 2.0; // 2 seconds to keep the combo
+
       this.onComboUpdate(this.combo);
 
       let bType: 'normal' | 'fire' | 'tnt' | 'laser' = 'normal';
