@@ -17,6 +17,7 @@ export class Game {
   private health: number = 5;
   private maxHealth: number = 5;
   private combo: number = 0;
+  private comboTimer: number = 0;
   private currentInput: string = '';
 
   private enemies: Enemy[] = [];
@@ -277,6 +278,7 @@ export class Game {
 
     if (target) {
       this.combo++;
+      this.comboTimer = 2.0; // 2 seconds to keep the combo
       this.onComboUpdate(this.combo);
 
       let bType: 'normal' | 'fire' | 'tnt' | 'laser' = 'normal';
@@ -285,8 +287,7 @@ export class Game {
       if (this.character === 'jiejie') {
          if (this.weaponLevel === 1) { bType = 'normal'; spread = 1; }
          else if (this.weaponLevel === 2) { bType = 'fire'; spread = 3; }
-         else { bType = 'tnt'; spread = 3; }
-         if (Math.random() < 0.3) bType = 'tnt';
+         else { bType = 'fire'; spread = 5; }
       } else {
          if (this.weaponLevel === 1) { bType = 'normal'; spread = 1; }
          else if (this.weaponLevel === 2) { bType = 'laser'; spread = 1; }
@@ -471,6 +472,14 @@ export class Game {
     if (this.slownessTimer > 0) this.slownessTimer -= dt;
     if (this.swiftnessTimer > 0) this.swiftnessTimer -= dt;
     else this.piercingSword = false; // Sword expires with swiftness for simplicity, or we can make it infinite for stage
+
+    if (this.combo > 0) {
+      this.comboTimer -= dt;
+      if (this.comboTimer <= 0) {
+        this.combo = 0;
+        this.onComboUpdate(this.combo);
+      }
+    }
 
     // Player Movement (keyboard + mobile joystick)
     let dx = 0, dy = 0;
