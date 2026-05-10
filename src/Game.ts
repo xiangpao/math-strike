@@ -488,6 +488,7 @@ export class Game {
     }
     this.health--;
     this.combo = 0;
+    this.weaponLevel = Math.max(1, this.weaponLevel - 1);
     this.onHealthUpdate(this.health);
     this.onComboUpdate(this.combo);
     this.audio.playExplosion();
@@ -572,21 +573,7 @@ export class Game {
       if (Math.sqrt(odx*odx + ody*ody) < obs.radius + 20) {
         this.obstacles.splice(i, 1);
         this.createParticles(obs.x, obs.y, '#7D7D7D', 20);
-        this.audio.playExplosion();
-        if (!this.shieldActive) {
-          this.health--;
-          this.combo = 0;               // Bug 1 fix: reset combo on obstacle hit
-          this.onHealthUpdate(this.health);
-          this.onComboUpdate(this.combo); // Bug 2 fix: fire callback so UI hides
-          if (this.health <= 0) {
-            this.isRunning = false;
-            this.onGameOver(this.score);
-            return;
-          }
-        } else {
-          this.shieldActive = false;
-          this.spawnFloatText(this.playerX, this.playerY - 20, '护盾抵挡！', '#A0A0FF');
-        }
+        this.damagePlayer();
         continue;
       }
       if (obs.y > this.canvas.height + 50) this.obstacles.splice(i, 1);
