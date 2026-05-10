@@ -96,6 +96,10 @@ export class Game {
   public onBombsUpdate: (bombs: number) => void = () => {};
   public onInputUpdate: (input: string) => void = () => {};
 
+  // Height reserved for mobile controls at the bottom (px)
+  private bottomMargin: number = 0;
+  public setBottomMargin(px: number) { this.bottomMargin = px; }
+
   constructor(canvas: HTMLCanvasElement, audio: AudioSystem) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
@@ -179,7 +183,7 @@ export class Game {
     }
 
     this.playerX = this.canvas.width / 2;
-    this.playerY = this.canvas.height - 100;
+    this.playerY = this.canvas.height - this.bottomMargin - 100;
     
     this.onHealthUpdate(this.health);
     this.onScoreUpdate(this.score);
@@ -399,10 +403,10 @@ export class Game {
     for(let i=0; i<count; i++) {
       this.particles.push({
         x, y,
-        vx: (Math.random() - 0.5) * 400,
-        vy: (Math.random() - 0.8) * 400,
+        vx: (Math.random() - 0.5) * 180,  // slower = stay on screen longer
+        vy: (Math.random() - 0.8) * 180,
         life: 1.0, color,
-        size: Math.random() * 6 + 3
+        size: Math.random() * 8 + 5        // bigger base size
       });
     }
   }
@@ -488,9 +492,9 @@ export class Game {
       this.playerY += (dy/len) * norm * speed * dt;
     }
     
-    // Bounds
+    // Bounds (respect bottomMargin so player stays in visible area)
     this.playerX = Math.max(30, Math.min(this.canvas.width - 30, this.playerX));
-    this.playerY = Math.max(30, Math.min(this.canvas.height - 30, this.playerY));
+    this.playerY = Math.max(30, Math.min(this.canvas.height - this.bottomMargin - 30, this.playerY));
 
     // Spawn and Update Obstacles
     this.obstacleSpawnTimer -= dt * 1000;
@@ -523,7 +527,9 @@ export class Game {
         this.audio.playExplosion();
         if (!this.shieldActive) {
           this.health--;
+          this.combo = 0;               // Bug 1 fix: reset combo on obstacle hit
           this.onHealthUpdate(this.health);
+          this.onComboUpdate(this.combo); // Bug 2 fix: fire callback so UI hides
           if (this.health <= 0) {
             this.isRunning = false;
             this.onGameOver(this.score);
@@ -698,26 +704,71 @@ export class Game {
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i];
       let targetValid = this.enemies.includes(b.target);
-      
-      if (!targetValid && !b.piercing) {
-        this.bullets.splice(i, 1);
-        continue;
-      }
 
+      // 1. Move Bullet
       let dx = 0, dy = -1;
+      let distToTarget = 9999;
       if (targetValid) {
          dx = b.target.x - b.x;
          dy = b.target.y - b.y;
+         distToTarget = Math.sqrt(dx*dx + dy*dy);
+         const moveX = (dx / distToTarget) * b.speed * dt;
+         const moveY = (dy / distToTarget) * b.speed * dt;
+         b.x += moveX + (b.angleOffset ? b.angleOffset * 50 * dt : 0);
+         b.y += moveY;
+      } else {
+         b.x += (b.angleOffset ? b.angleOffset * 50 * dt : 0);
+         b.y -= b.speed * dt;
       }
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      
-      if (targetValid && dist < b.speed * dt) {
-        // Hit
+
+      // 2. Out of bounds check
+      if (b.y < -50 || b.x < -50 || b.x > this.canvas.width + 50) {
+         this.bullets.splice(i, 1);
+         continue;
+      }
+
+      if (b.type === 'fire') this.createParticles(b.x, b.y, '#ff4500', 1);
+
+      // 3. Obstacle (Meteorite) Collision
+      let hitObstacle = false;
+      for (const obs of this.obstacles) {
+        const odx = obs.x - b.x;
+        const ody = obs.y - b.y;
+        if (Math.sqrt(odx*odx + ody*ody) < obs.radius + 10) {
+           hitObstacle = true;
+           this.createParticles(b.x, b.y, '#cccccc', 5); // spark
+           break;
+        }
+      }
+      if (hitObstacle && !b.piercing) {
+         this.bullets.splice(i, 1);
+         continue;
+      }
+
+      // 4. Enemy Collision
+      let hitEnemy: Enemy | null = null;
+      if (targetValid && distToTarget < b.speed * dt) {
+         hitEnemy = b.target;
+      } else if (!targetValid) {
+         // Stray bullet collision
+         for (const e of this.enemies) {
+            const edx = e.x - b.x;
+            const edy = e.y - b.y;
+            const hitRadius = Math.max(e.width, e.height) / 2;
+            if (Math.sqrt(edx*edx + edy*edy) < hitRadius) {
+               hitEnemy = e;
+               break;
+            }
+         }
+      }
+
+      // 5. Handle Enemy Hit
+      if (hitEnemy) {
         if (!b.piercing) this.bullets.splice(i, 1);
         
-        b.target.hp--;
-        if (b.target.hp <= 0) {
-          const eIdx = this.enemies.indexOf(b.target);
+        hitEnemy.hp--;
+        if (hitEnemy.hp <= 0) {
+          const eIdx = this.enemies.indexOf(hitEnemy);
           if (eIdx !== -1) {
             const e = this.enemies[eIdx];
             this.enemies.splice(eIdx, 1);
@@ -731,7 +782,6 @@ export class Game {
             if (b.type === 'tnt' || b.type === 'laser') {
               this.audio.playExplosion();
               this.createParticles(e.x, e.y, '#FFA500', 40);
-              // AoE
               for (let j = this.enemies.length - 1; j >= 0; j--) {
                 const other = this.enemies[j];
                 const odx = other.x - e.x, ody = other.y - e.y;
@@ -758,22 +808,12 @@ export class Game {
             }
           }
         } else {
-          // Boss hit but not dead
           this.audio.playHit();
-          this.createParticles(b.target.x, b.target.y, '#ffffff', 5);
-          if (b.target.type.startsWith('boss')) {
+          this.createParticles(hitEnemy.x, hitEnemy.y, '#ffffff', 5);
+          if (hitEnemy.type.startsWith('boss')) {
             this.updateBossMath();
           }
         }
-      } else {
-        const moveX = targetValid ? (dx / dist) * b.speed * dt : 0;
-        const moveY = targetValid ? (dy / dist) * b.speed * dt : -b.speed * dt;
-        
-        b.x += moveX + (b.angleOffset ? b.angleOffset * 50 : 0);
-        b.y += moveY;
-        
-        if (b.type === 'fire') this.createParticles(b.x, b.y, '#ff4500', 1);
-        if (b.y < -50) this.bullets.splice(i, 1);
       }
     }
 
@@ -1009,14 +1049,14 @@ export class Game {
 
     // Draw Particles
     for (const p of this.particles) {
+      this.ctx.save();
       this.ctx.globalAlpha = Math.max(0, p.life);
       this.ctx.fillStyle = p.color;
-      this.ctx.shadowBlur = 8;
+      this.ctx.shadowBlur = 12;
       this.ctx.shadowColor = p.color;
-      const sz = (p.size || 6) * p.life;
+      const sz = p.size || 8;  // fixed size — fade via alpha only
       this.ctx.fillRect(p.x - sz/2, p.y - sz/2, sz, sz);
-      this.ctx.shadowBlur = 0;
-      this.ctx.globalAlpha = 1.0;
+      this.ctx.restore();
     }
 
     // Draw Float Texts

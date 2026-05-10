@@ -129,6 +129,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (isTouchDevice()) {
     if (bombHint) bombHint.textContent = '[💥]';
 
+    // Tell game engine to keep player above mobile controls bar
+    game.setBottomMargin(160);
+
     // Show controls only while game HUD is visible
     const showMobile = () => mobileControls.classList.remove('hidden');
     const hideMobile = () => mobileControls.classList.add('hidden');
