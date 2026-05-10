@@ -38,6 +38,8 @@ export class Game {
   private enemySpawnInterval: number = 4000;
   private enemiesToSpawnThisStage: number = 0;
   private enemiesSpawned: number = 0;
+  private skeletonsSpawned: number = 0;
+  private maxSkeletonsThisStage: number = 0;
 
   private playerX: number = 0;
   private playerY: number = 0;
@@ -169,6 +171,12 @@ export class Game {
     this.currentInput = '';
     this.onInputUpdate(this.currentInput);
     this.enemiesSpawned = 0;
+    this.skeletonsSpawned = 0;
+    if (this.stage === 2) this.maxSkeletonsThisStage = 1;
+    else if (this.stage === 3) this.maxSkeletonsThisStage = Math.random() > 0.5 ? 2 : 3;
+    else if (this.stage >= 4) this.maxSkeletonsThisStage = Math.random() > 0.5 ? 3 : 4;
+    else this.maxSkeletonsThisStage = 0;
+
     this.slownessTimer = 0;
     this.swiftnessTimer = 0;
     this.piercingSword = false;
@@ -178,9 +186,9 @@ export class Game {
 
     if (this.mode === 'story') {
       this.enemiesToSpawnThisStage = 5 + this.stage * 3; // Reduced number for testing
-      this.enemySpawnInterval = Math.max(2000, 4000 - this.stage * 500);
+      this.enemySpawnInterval = Math.max(1500, 3000 - this.stage * 300);
     } else {
-      this.enemySpawnInterval = 3000;
+      this.enemySpawnInterval = 2000;
     }
 
     this.playerX = this.canvas.width / 2;
@@ -322,7 +330,7 @@ export class Game {
     }
   }
 
-  private generateMathProblem(): { problem: string, answer: number } {
+  private generateMathProblem(forceMixed: boolean = false): { problem: string, answer: number } {
     let limit = 10;
     
     if (this.mode === 'story') {
@@ -333,6 +341,10 @@ export class Game {
       limit = Math.min(100, 10 + Math.floor(this.score / 50) * 10);
     }
 
+    if (forceMixed) {
+      return this.generateMixed(Math.max(10, limit));
+    }
+
     if (limit <= 10) {
       // 10以内全是基础运算
       return this.generateBasic(10);
@@ -340,14 +352,8 @@ export class Game {
 
     const r = Math.random();
     
-    // 随着难度（limit）的上升，混合运算的概率逐渐增加，最高可达 40%
-    const mixedChance = Math.min(0.4, (limit - 10) / 100 * 0.4 + 0.1); 
-    
-    if (r < mixedChance) {
-      // 混合运算
-      return this.generateMixed(limit);
-    } else if (r < mixedChance + 0.4) {
-      // 40% 的概率出当前难度的基础运算
+    if (r < 0.6) {
+      // 60% 的概率出当前难度的基础运算
       return this.generateBasic(limit);
     } else {
       // 剩余概率出上一阶段（低一档）的基础运算，作为过渡
@@ -391,16 +397,31 @@ export class Game {
   }
 
   private spawnEnemy() {
-    const { problem, answer } = this.generateMathProblem();
-    
     let type: EnemyType = 'zombie';
     const rand = Math.random();
-    if (this.stage >= 1 && rand > 0.7) type = 'creeper';
-    if (this.stage >= 2 && rand > 0.85) type = 'skeleton';
-    if (this.stage >= 3 && rand > 0.9) type = 'enderman';
+
+    let isSkeleton = false;
+    if (this.skeletonsSpawned < this.maxSkeletonsThisStage) {
+      const enemiesLeft = this.enemiesToSpawnThisStage - this.enemiesSpawned;
+      const skeletonsLeft = this.maxSkeletonsThisStage - this.skeletonsSpawned;
+      // Spawn skeleton if random chance, or if we must to meet the quota
+      if (rand < 0.2 || enemiesLeft <= skeletonsLeft) {
+        isSkeleton = true;
+        this.skeletonsSpawned++;
+      }
+    }
+
+    if (isSkeleton) {
+      type = 'skeleton';
+    } else {
+      if (this.stage >= 1 && rand > 0.7) type = 'creeper';
+      else if (this.stage >= 3 && rand > 0.9) type = 'enderman';
+    }
+
+    const { problem, answer } = this.generateMathProblem(isSkeleton);
 
     // Base speed significantly slower than before
-    let speed = 40 + Math.random() * 30; 
+    let speed = 20 + Math.random() * 20; 
     if (this.mode === 'endless') {
       speed += Math.floor(this.score / 200) * 10;
     }
@@ -439,7 +460,7 @@ export class Game {
 
   private updateBossMath() {
     if (this.bossEntity) {
-      const { problem, answer } = this.generateMathProblem();
+      const { problem, answer } = this.generateMathProblem(this.stage >= 3);
       this.bossEntity.problem = problem;
       this.bossEntity.answer = answer;
     }
@@ -548,7 +569,7 @@ export class Game {
     // Spawn and Update Obstacles
     this.obstacleSpawnTimer -= dt * 1000;
     if (this.obstacleSpawnTimer <= 0) {
-      this.obstacleSpawnTimer = 2000 + Math.random() * 3000;
+      this.obstacleSpawnTimer = (this.bossActive ? 1500 : 2500) + Math.random() * 2500;
       const isDynamic = Math.random() > 0.5;
       this.obstacles.push({
         x: Math.random() * this.canvas.width,
