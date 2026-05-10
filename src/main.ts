@@ -120,4 +120,112 @@ document.addEventListener('DOMContentLoaded', () => {
   game.onInputUpdate = (inputStr) => {
     (document.getElementById('input-val') as HTMLElement).innerText = inputStr || '_';
   };
+
+  // ─── Mobile Controls ───────────────────────────────────────────────────────
+  const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
+  const mobileControls = document.getElementById('mobile-controls') as HTMLElement;
+  const bombHint = document.querySelector('.bomb-hint') as HTMLElement;
+
+  if (isTouchDevice()) {
+    if (bombHint) bombHint.textContent = '[💥]';
+
+    // Show controls only while game HUD is visible
+    const showMobile = () => mobileControls.classList.remove('hidden');
+    const hideMobile = () => mobileControls.classList.add('hidden');
+
+    // Hook into game state transitions
+    btnStory.addEventListener('click', showMobile);
+    btnEndless.addEventListener('click', showMobile);
+    btnRestart.addEventListener('click', hideMobile);
+    btnNextStage.addEventListener('click', showMobile);
+    game.onGameOver = (score) => {
+      audioSystem.stopBGM();
+      gameHud.classList.add('hidden');
+      gameOverScreen.classList.remove('hidden');
+      (document.getElementById('final-score-val') as HTMLElement).innerText = score.toString();
+      hideMobile();
+    };
+    game.onStageClear = () => {
+      gameHud.classList.add('hidden');
+      stageClearScreen.classList.remove('hidden');
+      hideMobile();
+    };
+
+    // ── Joystick ──────────────────────────────────────────────────────────
+    const joystickBase = document.getElementById('joystick-base') as HTMLElement;
+    const joystickKnob = document.getElementById('joystick-knob') as HTMLElement;
+    const KNOB_RADIUS = 32; // max travel in px (= joystick-base radius - knob radius)
+
+    let joystickTouchId: number | null = null;
+    let joystickOriginX = 0;
+    let joystickOriginY = 0;
+
+    joystickBase.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (joystickTouchId !== null) return;
+      const t = e.changedTouches[0];
+      joystickTouchId = t.identifier;
+      const rect = joystickBase.getBoundingClientRect();
+      joystickOriginX = rect.left + rect.width / 2;
+      joystickOriginY = rect.top + rect.height / 2;
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+      if (joystickTouchId === null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (t.identifier !== joystickTouchId) continue;
+        const rawDx = t.clientX - joystickOriginX;
+        const rawDy = t.clientY - joystickOriginY;
+        const dist = Math.sqrt(rawDx * rawDx + rawDy * rawDy);
+        const clamped = Math.min(dist, KNOB_RADIUS);
+        const angle = Math.atan2(rawDy, rawDx);
+        const kx = Math.cos(angle) * clamped;
+        const ky = Math.sin(angle) * clamped;
+        joystickKnob.style.transform = `translate(${kx}px, ${ky}px)`;
+        game.setJoystick(kx / KNOB_RADIUS, ky / KNOB_RADIUS);
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    const releaseJoystick = (e: TouchEvent) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === joystickTouchId) {
+          joystickTouchId = null;
+          joystickKnob.style.transform = 'translate(0,0)';
+          game.setJoystick(0, 0);
+        }
+      }
+    };
+    window.addEventListener('touchend', releaseJoystick);
+    window.addEventListener('touchcancel', releaseJoystick);
+
+    // ── Numpad ────────────────────────────────────────────────────────────
+    const numBtns = document.querySelectorAll<HTMLButtonElement>('.num-btn[data-digit]');
+    numBtns.forEach(btn => {
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const d = btn.getAttribute('data-digit');
+        if (d) game.appendInput(d);
+      }, { passive: false });
+    });
+
+    const btnDel = document.getElementById('btn-del') as HTMLButtonElement;
+    btnDel.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      game.deleteInput();
+    }, { passive: false });
+
+    const btnFire = document.getElementById('btn-fire') as HTMLButtonElement;
+    btnFire.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      game.triggerFire();
+    }, { passive: false });
+
+    const btnBombMobile = document.getElementById('btn-bomb-mobile') as HTMLButtonElement;
+    btnBombMobile.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      game.triggerBomb();
+    }, { passive: false });
+  }
 });

@@ -22,7 +22,7 @@
 ### 核心技术栈
 - **语言**: TypeScript / HTML5 / Vanilla CSS
 - **构建工具**: Vite
-- **DOM / Canvas 操作**: 游戏核心逻辑可能使用原生 Canvas API 或 DOM 节点进行渲染和动画处理。
+- **DOM / Canvas 操作**: 游戏核心逻辑可能使用原生 Canvas API 或 DOM 节点进行渲染 and 动画处理。
 
 ### 本地运行指南
 1. 确保已安装 Node.js 和 npm。
@@ -39,9 +39,12 @@
    在本地运行 `npm run build`，Vite 会将 TypeScript 代码编译并打包，最终生成的静态文件将放置在 `dist` 目录下。
 
 2. **推荐部署方案**:
-   您可以将 `dist` 目录下的所有文件上传至以下任何一个免费的静态托管平台：
-   - **Vercel** (推荐): 直接连接您的 GitHub 仓库，自动构建和部署。
-   - **Netlify**: 同样支持 GitHub 关联，一键部署静态页面。
-   - **GitHub Pages**: 将 `dist` 目录的内容推送到名为 `gh-pages` 的分支，即可免费获得 `username.github.io/repo-name` 的访问链接。
+   - **EdgeOne Pages** (当前配置): 本项目已针对 EdgeOne Pages 进行深度适配，支持通过 Antigravity 自动化部署工具直接发布。
+   - 其他方案: 也可将 `dist` 目录内容上传至 Vercel, Netlify 或 GitHub Pages。
+
+## 文档与运维
+
+- [部署指南](docs/deployment.md) — 如何使用 EdgeOne Pages 部署本项目。
+- [MCP 故障排查](docs/mcp_troubleshooting.md) — 解决 Windows 环境下 MCP 连接和初始化问题。
 
 部署完成后，您将获得一个公开的网络链接，可以直接分享给您的朋友！

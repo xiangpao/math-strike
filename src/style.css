@@ -264,3 +264,176 @@ h2 {
   font-size: 2rem;
   margin-bottom: 30px;
 }
+
+/* ═══════════════════════════════════════════════════
+   MOBILE CONTROLS
+═══════════════════════════════════════════════════ */
+#mobile-controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 160px;
+  z-index: 20;
+  display: flex;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  border-top: 2px solid rgba(255,255,255,0.12);
+}
+
+#mobile-controls.hidden {
+  display: none;
+}
+
+/* Left panel – joystick */
+.mobile-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#joystick-zone {
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#joystick-base {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.25);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+#joystick-knob {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #75B04A, #3a6e1f);
+  border: 2px solid rgba(255,255,255,0.5);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+  transition: transform 0.05s;
+  pointer-events: none;
+}
+
+/* Right panel – numpad + bomb */
+.mobile-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px 6px 0;
+}
+
+#mobile-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  width: 100%;
+  max-width: 190px;
+}
+
+.num-btn {
+  font-family: 'ZCOOL KuaiLe', sans-serif;
+  font-size: 1.1rem;
+  height: 36px;
+  background: rgba(93,144,56,0.7);
+  color: #fff;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s, transform 0.08s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.num-btn:active {
+  background: rgba(117,176,74,0.9);
+  transform: scale(0.93);
+}
+
+.del-btn {
+  background: rgba(120,50,50,0.7);
+  font-size: 1.1rem;
+}
+
+.del-btn:active { background: rgba(180,70,70,0.9); }
+
+.fire-btn {
+  background: rgba(200,140,0,0.8);
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+.fire-btn:active { background: rgba(255,200,0,0.9); }
+
+.bomb-mobile-btn {
+  font-family: 'ZCOOL KuaiLe', sans-serif;
+  font-size: 0.9rem;
+  width: 100%;
+  max-width: 190px;
+  height: 28px;
+  background: rgba(160,30,30,0.75);
+  color: #fff;
+  border: 2px solid rgba(255,100,100,0.4);
+  border-radius: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bomb-mobile-btn:active {
+  background: rgba(220,50,50,0.9);
+  transform: scale(0.96);
+}
+
+/* ═══════════════════════════════════════════════════
+   RESPONSIVE HUD – shrink on small screens
+═══════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.5rem; }
+
+  .hud-top { font-size: 1.1rem; padding: 8px 12px; }
+  .bomb-bar { font-size: 0.85rem; }
+
+  .input-display {
+    font-size: 2rem;
+    padding: 6px 20px;
+  }
+
+  .combo { font-size: 2.5rem; }
+
+  /* Push input display above mobile controls bar */
+  .hud-bottom { padding-bottom: 170px; }
+
+  .char-card { width: 90px; height: 120px; }
+  .char-sprite { width: 50px; height: 50px; }
+  .mc-btn { font-size: 1.1rem; padding: 8px 20px; }
+
+  .character-select { padding: 12px; }
+}
+
+@media (max-width: 360px) {
+  .hud-top { font-size: 0.95rem; }
+  #mobile-numpad { max-width: 165px; }
+  .num-btn { height: 38px; font-size: 1.1rem; }
+}
+

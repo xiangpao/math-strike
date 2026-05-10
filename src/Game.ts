@@ -42,6 +42,37 @@ export class Game {
   private playerY: number = 0;
   private playerSpeed: number = 400;
   private keys: { [key: string]: boolean } = {};
+
+  // Mobile joystick input (-1 to 1)
+  private joystickDx: number = 0;
+  private joystickDy: number = 0;
+
+  public setJoystick(dx: number, dy: number) {
+    this.joystickDx = dx;
+    this.joystickDy = dy;
+  }
+
+  public triggerFire() {
+    if (this.isRunning) this.fireBullet();
+  }
+
+  public triggerBomb() {
+    if (this.isRunning) this.useBomb();
+  }
+
+  public appendInput(digit: string) {
+    if (!this.isRunning) return;
+    if (this.currentInput.length < 3) {
+      this.currentInput += digit;
+      this.onInputUpdate(this.currentInput);
+    }
+  }
+
+  public deleteInput() {
+    if (!this.isRunning) return;
+    this.currentInput = this.currentInput.slice(0, -1);
+    this.onInputUpdate(this.currentInput);
+  }
   
   // Buffs
   private slownessTimer: number = 0;
@@ -437,20 +468,24 @@ export class Game {
     if (this.swiftnessTimer > 0) this.swiftnessTimer -= dt;
     else this.piercingSword = false; // Sword expires with swiftness for simplicity, or we can make it infinite for stage
 
-    // Player Movement
+    // Player Movement (keyboard + mobile joystick)
     let dx = 0, dy = 0;
     if (this.keys['ArrowUp']) dy -= 1;
     if (this.keys['ArrowDown']) dy += 1;
     if (this.keys['ArrowLeft']) dx -= 1;
     if (this.keys['ArrowRight']) dx += 1;
-    
+    // Merge joystick input
+    dx += this.joystickDx;
+    dy += this.joystickDy;
+
     if (dx !== 0 || dy !== 0) {
       const len = Math.sqrt(dx*dx + dy*dy);
+      const norm = Math.min(len, 1); // clamp to unit
       let speed = this.playerSpeed;
       if (this.character === 'maijie') speed *= 1.25;
       if (this.swiftnessTimer > 0) speed *= 1.3;
-      this.playerX += (dx/len) * speed * dt;
-      this.playerY += (dy/len) * speed * dt;
+      this.playerX += (dx/len) * norm * speed * dt;
+      this.playerY += (dy/len) * norm * speed * dt;
     }
     
     // Bounds
